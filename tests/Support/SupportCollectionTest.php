@@ -8,7 +8,6 @@ use ArrayObject;
 use CachingIterator;
 use Exception;
 use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
@@ -18,7 +17,6 @@ use Illuminate\Support\MultipleItemsFoundException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Stringable;
 use InvalidArgumentException;
-use IteratorAggregate;
 use JsonSerializable;
 use Mockery as m;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,10 +24,10 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use stdClass;
 use Symfony\Component\VarDumper\VarDumper;
-use Traversable;
 use UnexpectedValueException;
 use WeakMap;
 
+include_once 'Common.php';
 include_once 'Enums.php';
 
 class SupportCollectionTest extends TestCase
@@ -838,6 +836,10 @@ class SupportCollectionTest extends TestCase
         $this->assertFalse((new $collection([]))->containsOneItem());
         $this->assertTrue((new $collection([1]))->containsOneItem());
         $this->assertFalse((new $collection([1, 2]))->containsOneItem());
+
+        $this->assertFalse(collect([1, 2, 2])->containsOneItem(fn ($number) => $number === 2));
+        $this->assertTrue(collect(['ant', 'bear', 'cat'])->containsOneItem(fn ($word) => strlen($word) === 4));
+        $this->assertFalse(collect(['ant', 'bear', 'cat'])->containsOneItem(fn ($word) => strlen($word) > 4));
     }
 
     public function testIterable()
@@ -2911,14 +2913,12 @@ class SupportCollectionTest extends TestCase
     #[DataProvider('collectionClassProvider')]
     public function testConstructMethodFromWeakMap($collection)
     {
-        $this->expectException('InvalidArgumentException');
-
         $map = new WeakMap();
         $object = new stdClass;
         $object->foo = 'bar';
         $map[$object] = 3;
-
         $data = new $collection($map);
+        $this->assertEquals([3], $data->all());
     }
 
     public function testSplice()
@@ -5783,63 +5783,11 @@ class TestArrayAccessImplementation implements ArrayAccess
     }
 }
 
-class TestArrayableObject implements Arrayable
-{
-    public function toArray()
-    {
-        return ['foo' => 'bar'];
-    }
-}
-
-class TestJsonableObject implements Jsonable
-{
-    public function toJson($options = 0)
-    {
-        return '{"foo":"bar"}';
-    }
-}
-
-class TestJsonSerializeObject implements JsonSerializable
-{
-    public function jsonSerialize(): array
-    {
-        return ['foo' => 'bar'];
-    }
-}
-
 class TestJsonSerializeToStringObject implements JsonSerializable
 {
     public function jsonSerialize(): string
     {
         return 'foobar';
-    }
-}
-
-class TestJsonSerializeWithScalarValueObject implements JsonSerializable
-{
-    public function jsonSerialize(): string
-    {
-        return 'foo';
-    }
-}
-
-class TestTraversableAndJsonSerializableObject implements IteratorAggregate, JsonSerializable
-{
-    public $items;
-
-    public function __construct($items)
-    {
-        $this->items = $items;
-    }
-
-    public function getIterator(): Traversable
-    {
-        return new ArrayIterator($this->items);
-    }
-
-    public function jsonSerialize(): array
-    {
-        return json_decode(json_encode($this->items), true);
     }
 }
 
