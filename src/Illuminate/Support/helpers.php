@@ -172,11 +172,15 @@ if (! function_exists('fluent')) {
     /**
      * Create a Fluent object from the given value.
      *
-     * @param  object|array  $value
+     * @param  null|object|iterable  $value
      */
-    function fluent($value): Fluent
+    function fluent($value = null): Fluent
     {
-        return new Fluent($value);
+        if (is_object($value) && ! is_iterable($value)) {
+            $value = (array) $value;
+        }
+
+        return new Fluent($value ?? []);
     }
 }
 
